@@ -185,6 +185,9 @@ module Net; module SSH; module Multi
         connection[:host] = host
         @mutex.synchronize { @connections.push(connection) }
         return connection
+      rescue Net::SSH::AuthenticationFailed => error
+        error.message << "@#{host}"
+        raise
       end
   end
 end; end; end
