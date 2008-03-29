@@ -14,6 +14,10 @@ module Net; module SSH; module Multi
       @gateway = @options.delete(:via)
     end
 
+    def [](key)
+      (@options[:properties] || {})[key]
+    end
+
     def port
       options[:port] || 22
     end
