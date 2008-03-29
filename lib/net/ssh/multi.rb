@@ -9,7 +9,6 @@ module Net; module SSH
         begin
           yield session
           session.loop
-        ensure
           session.close
         end
       else
