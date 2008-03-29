@@ -38,6 +38,10 @@ module Net; module SSH; module Multi
       end
     end
 
+    def inspect
+      @inspect ||= "#<%s:0x%x %s>" % [self.class.name, object_id, to_s]
+    end
+
     def session(ensure_open=false)
       return @session if @session || !ensure_open
       @session ||= begin 
