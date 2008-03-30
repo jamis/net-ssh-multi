@@ -17,11 +17,11 @@ module Net; module SSH; module Multi
     end
 
     def [](key)
-      @properties[key.to_sym]
+      @properties[key]
     end
 
     def []=(key, value)
-      @properties[key.to_sym] = value
+      @properties[key] = value
     end
 
     def exec(command, &block)
