@@ -1,0 +1,3 @@
+=== (unreleased)
+
+* First release of Net::SSH::Multi

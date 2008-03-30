@@ -1,0 +1,16 @@
+CHANGELOG.rdoc
+lib/net/ssh/multi/channel.rb
+lib/net/ssh/multi/server.rb
+lib/net/ssh/multi/session.rb
+lib/net/ssh/multi/version.rb
+lib/net/ssh/multi.rb
+Rakefile
+README.rdoc
+setup.rb
+test/channel_test.rb
+test/common.rb
+test/multi_test.rb
+test/server_test.rb
+test/session_test.rb
+test/test_all.rb
+Manifest
