@@ -153,19 +153,17 @@ class ServerTest < Test::Unit::TestCase
     assert srv.busy?
   end
 
-  def test_preprocess_should_be_true_when_session_is_not_open
-    assert_equal true, server('host', 'user').preprocess
+  def test_preprocess_should_be_nil_when_session_is_not_open
+    assert_nil server('host', 'user').preprocess
   end
 
   def test_preprocess_should_return_result_of_session_preprocess
     srv = server('host', 'user')
     session = {}
     Net::SSH.expects(:start).returns(session)
-    session.expects(:preprocess).returns(:result).yields(session)
-    called = nil
+    session.expects(:preprocess).returns(:result)
     srv.session(true)
-    assert_equal :result, srv.preprocess { |s| called = s }
-    assert_equal session, called
+    assert_equal :result, srv.preprocess
   end
 
   def test_readers_should_return_empty_array_when_session_is_not_open

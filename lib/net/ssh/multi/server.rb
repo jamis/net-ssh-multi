@@ -74,9 +74,8 @@ module Net; module SSH; module Multi
       session && session.busy?(include_invisible)
     end
 
-    def preprocess(&block)
-      return true unless session
-      session.preprocess(&block)
+    def preprocess
+      session.preprocess if session
     end
 
     def readers
