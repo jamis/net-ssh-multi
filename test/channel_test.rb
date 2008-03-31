@@ -29,15 +29,6 @@ class ChannelTest < Test::Unit::TestCase
     assert_equal [c1, c2], results
   end
 
-  def test_subsystem_should_delegate_to_component_channels
-    c1, c2, results = mock('channel'), mock('channel'), []
-    c1.expects(:subsystem).with('sftp').yields(c1)
-    c2.expects(:subsystem).with('sftp').yields(c2)
-    channel = Net::SSH::Multi::Channel.new(mock('session'), [c1, c2])
-    assert_equal channel, channel.subsystem('sftp') { |c| results << c }
-    assert_equal [c1, c2], results
-  end
-
   def test_request_pty_should_delegate_to_component_channels
     c1, c2, results = mock('channel'), mock('channel'), []
     c1.expects(:request_pty).with(:foo => 5).yields(c1)

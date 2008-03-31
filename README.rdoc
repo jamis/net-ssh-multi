@@ -43,7 +43,7 @@ In a nutshell:
     session.loop
   end
 
-See Net::SSH::Multi for more documentation.
+See Net::SSH::Multi::Session for more documentation.
 
 == REQUIREMENTS:
 
