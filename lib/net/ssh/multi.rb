@@ -52,8 +52,10 @@ module Net; module SSH
     #   session = Net::SSH::Multi.start
     #   # ...
     #   session.close
-    def self.start
-      session = Session.new
+    #
+    # Any options are passed directly to Net::SSH::Multi::Session.new (q.v.).
+    def self.start(options={})
+      session = Session.new(options)
 
       if block_given?
         begin

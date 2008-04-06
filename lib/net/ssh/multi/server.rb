@@ -6,6 +6,9 @@ module Net; module SSH; module Multi
   # need to instantiate one of these directly: instead, you should use
   # Net::SSH::Multi::Session#use.
   class Server
+    # The Net::SSH::Multi::Session instance that manages this server instance.
+    attr_reader :master
+
     # The host name (or IP address) of the server to connect to.
     attr_reader :host
 
@@ -21,12 +24,14 @@ module Net; module SSH; module Multi
     attr_reader :gateway
 
     # Creates a new Server instance with the given connection information. The
-    # +options+ hash must conform to the options described for Net::SSH::start,
-    # with one addition:
+    # +master+ argument must be a reference to the Net::SSH::Multi::Session
+    # instance that will manage this server reference. The +options+ hash must
+    # conform to the options described for Net::SSH::start, with one addition:
     #
     # * :via => a Net::SSH::Gateway instance to use when establishing a
     #   connection to this server.
-    def initialize(host, user, options={})
+    def initialize(master, host, user, options={})
+      @master = master
       @host = host
       @user = user
       @options = options.dup
@@ -77,9 +82,9 @@ module Net; module SSH; module Multi
       @inspect ||= "#<%s:0x%x %s>" % [self.class.name, object_id, to_s]
     end
 
-    # Returns the Net::SSH session object for this server. If +ensure_open+
+    # Returns the Net::SSH session object for this server. If +require_session+
     # is false and the session has not previously been created, this will
-    # return +nil+. If +ensure_open+ is true, the session will be instantiated
+    # return +nil+. If +require_session+ is true, the session will be instantiated
     # if it has not already been instantiated, via the +gateway+ if one is
     # given, or directly (via Net::SSH::start) otherwise.
     #
@@ -94,20 +99,9 @@ module Net; module SSH; module Multi
     # (the Server instance that spawned them).
     #
     #   assert_equal server, server.session[:server]
-    def session(ensure_open=false)
-      return @session if @session || !ensure_open
-      @session ||= begin 
-        session = if gateway
-          gateway.ssh(host, user, options)
-        else
-          Net::SSH.start(host, user, options)
-        end
-
-        session[:server] = self
-        session
-      end
-    rescue Net::SSH::AuthenticationFailed => error
-      raise Net::SSH::AuthenticationFailed.new("#{error.message}@#{host}")
+    def session(require_session=false)
+      return @session if @session || !require_session
+      @session ||= master.next_session(self)
     end
 
     # Returns +true+ if the session has been opened, and the session is currently
@@ -116,18 +110,57 @@ module Net; module SSH; module Multi
       session && session.busy?(include_invisible)
     end
 
+    # Closes this server's session. If the session has not yet been opened,
+    # this does nothing.
+    def close
+      session.close if session
+    ensure
+      master.server_closed(self) if session
+      @session = nil
+    end
+
     public # but not published, e.g., these are used internally only...
-    
+
+      # Indicate that the session currently in use by this server instance
+      # should be replaced by the given +session+ argument. This is used when
+      # a pending session has been "realized". Note that this does not
+      # actually replace the session--see #update_session! for that.
+      def replace_session(session) #:nodoc:
+        @ready_session = session
+      end
+
+      # If a new session has been made ready (see #replace_session), this
+      # will replace the current session with the "ready" session. This
+      # method is called from the event loop to ensure that sessions are
+      # swapped in at the appropriate point (instead of in the middle of an
+      # event poll).
+      def update_session! #:nodoc:
+        if @ready_session
+          @session, @ready_session = @ready_session, nil
+        end
+      end
+
+      # Returns a new session object based on this server's connection
+      # criteria. Note that this will not associate the session with the
+      # server, and should not be called directly; it is called internally
+      # from Net::SSH::Multi::Session when a new session is required.
+      def new_session #:nodoc:
+        session = if gateway
+          gateway.ssh(host, user, options)
+        else
+          Net::SSH.start(host, user, options)
+        end
+
+        session[:server] = self
+        session
+      rescue Net::SSH::AuthenticationFailed => error
+        raise Net::SSH::AuthenticationFailed.new("#{error.message}@#{host}")
+      end
+
       # Closes all open channels on this server's session. If the session has
       # not yet been opened, this does nothing.
       def close_channels #:nodoc:
         session.channels.each { |id, channel| channel.close } if session
-      end
-
-      # Closes this server's session's transport layer. If the session has not
-      # yet been opened, this does nothing.
-      def close #:nodoc:
-        session.transport.close if session
       end
 
       # Runs the session's preprocess action, if the session has been opened.

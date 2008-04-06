@@ -251,8 +251,10 @@ class SessionTest < Test::Unit::TestCase
     srv2 = @session.use('h2', 'u2')
     s1 = { :server => srv1 }
     s2 = { :server => srv2 }
-    c1 = {}
+    c1 = { :stub => :value }
     c2 = {}
+    c1.stubs(:connection).returns(s1)
+    c2.stubs(:connection).returns(s2)
     @session.expects(:active_sessions).returns([s1, s2])
     s1.expects(:open_channel).with("session").yields(c1).returns(c1)
     s2.expects(:open_channel).with("session").yields(c2).returns(c2)

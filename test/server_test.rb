@@ -2,6 +2,10 @@ require 'common'
 require 'net/ssh/multi/server'
 
 class ServerTest < Test::Unit::TestCase
+  def setup
+    @master = mock('multi-session')
+  end
+
   def test_accessor_without_properties_should_access_empty_hash
     assert_nil server('host', 'user')[:foo]
   end
@@ -72,19 +76,8 @@ class ServerTest < Test::Unit::TestCase
   end
 
   def test_session_with_true_argument_should_instantiate_and_cache_session
-    session = {}
     srv = server('host', 'user', :port => 1234)
-    Net::SSH.expects(:start).with('host', 'user', {:port => 1234}).once.returns(session)
-    assert_equal session, srv.session(true)
-    assert_equal session, srv.session(true)
-    assert_equal session, srv.session
-  end
-
-  def test_session_via_gateway_with_true_argument_should_instantiate_and_cache_session
-    session = {}
-    gateway = mock('gateway')
-    srv = server('host', 'user', :port => 1234, :via => gateway)
-    gateway.expects(:ssh).with('host', 'user', {:port => 1234}).once.returns(session)
+    session = expect_connection_to(srv)
     assert_equal session, srv.session(true)
     assert_equal session, srv.session(true)
     assert_equal session, srv.session
@@ -92,10 +85,10 @@ class ServerTest < Test::Unit::TestCase
 
   def test_session_that_cannot_authenticate_adds_host_to_exception_message
     srv = server('host', 'user')
-    Net::SSH.expects(:start).raises(Net::SSH::AuthenticationFailed.new('user'))
+    Net::SSH.expects(:start).with('host', 'user', {}).raises(Net::SSH::AuthenticationFailed.new('user'))
 
     begin
-      srv.session(true)
+      srv.new_session
       flunk
     rescue Net::SSH::AuthenticationFailed => e
       assert_equal "user@host", e.message
@@ -108,8 +101,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_close_channels_when_session_is_open_should_iterate_over_open_channels_and_close_them
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     c1 = mock('channel', :close => nil)
     c2 = mock('channel', :close => nil)
     c3 = mock('channel', :close => nil)
@@ -122,11 +114,11 @@ class ServerTest < Test::Unit::TestCase
     assert_nothing_raised { server('host', 'user').close }
   end
 
-  def test_close_when_session_is_open_should_close_transport_layer
+  def test_close_when_session_is_open_should_close_session
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
-    session.expects(:transport).returns(mock('transport', :close => nil))
+    session = expect_connection_to(srv)
+    session.expects(:close)
+    @master.expects(:server_closed).with(srv)
     assert_equal session, srv.session(true)
     srv.close
   end
@@ -137,8 +129,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_busy_should_be_false_when_session_is_not_busy
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     session.expects(:busy?).returns(false)
     srv.session(true)
     assert !srv.busy?
@@ -146,8 +137,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_busy_should_be_true_when_session_is_busy
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     session.expects(:busy?).returns(true)
     srv.session(true)
     assert srv.busy?
@@ -159,8 +149,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_preprocess_should_return_result_of_session_preprocess
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     session.expects(:preprocess).returns(:result)
     srv.session(true)
     assert_equal :result, srv.preprocess
@@ -172,8 +161,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_readers_should_return_all_listeners_when_session_is_open
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     session.expects(:listeners).returns(1 => 2, 3 => 4, 5 => 6, 7 => 8)
     srv.session(true)
     assert_equal [1, 3, 5, 7], srv.readers.sort
@@ -185,8 +173,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_writers_should_return_all_listeners_that_are_pending_writes_when_session_is_open
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     listeners = { writer(:ready) => 1, writer(:reader) => 2,
       writer(:reader) => 3, writer(:idle) => 4, writer(:ready) => 5 }
     session.expects(:listeners).returns(listeners)
@@ -200,8 +187,7 @@ class ServerTest < Test::Unit::TestCase
 
   def test_postprocess_should_call_session_postprocess_with_ios_belonging_to_session
     srv = server('host', 'user')
-    session = {}
-    Net::SSH.expects(:start).returns(session)
+    session = expect_connection_to(srv)
     session.expects(:listeners).returns(1 => 2, 3 => 4, 5 => 6, 7 => 8)
     session.expects(:postprocess).with([1,3], [7]).returns(:result)
     srv.session(true)
@@ -211,7 +197,13 @@ class ServerTest < Test::Unit::TestCase
   private
 
     def server(host, user, options={})
-      Net::SSH::Multi::Server.new(host, user, options)
+      Net::SSH::Multi::Server.new(@master, host, user, options)
+    end
+
+    def expect_connection_to(server)
+      session = {}
+      @master.expects(:next_session).with(server).returns(session)
+      return session
     end
 
     def writer(mode)
