@@ -381,6 +381,14 @@ module Net; module SSH; module Multi
           # do nothing
         when :warn then
           warn("error connecting to #{server}: #{e.class} (#{e.message})")
+        when Proc then
+          go = catch(:go) { on_error.call(server); nil }
+          case go
+          when nil, :ignore then # nothing
+          when :retry then retry
+          when :raise then raise
+          else warn "unknown 'go' command: #{go.inspect}"
+          end
         else
           raise
         end
