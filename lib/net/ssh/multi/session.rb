@@ -20,13 +20,13 @@ module Net; module SSH; module Multi
   #     session.via 'gateway', 'gateway-user'
   # 
   #     # define the servers we want to use
-  #     session.use 'host1', 'user1'
-  #     session.use 'host2', 'user2'
+  #     session.use 'user1@host1'
+  #     session.use 'user2@host2'
   # 
   #     # define servers in groups for more granular access
   #     session.group :app do
-  #       session.use 'app1', 'user'
-  #       session.use 'app2', 'user'
+  #       session.use 'user@app1'
+  #       session.use 'user@app2'
   #     end
   # 
   #     # execute commands on all servers
@@ -65,6 +65,12 @@ module Net; module SSH; module Multi
     # :warn if connection errors should cause a warning.
     attr_accessor :on_error
 
+    # The default user name to use when connecting to a server. If a user name
+    # is not given for a particular server, this value will be used. It defaults
+    # to ENV['USER'] || ENV['USERNAME'], or "unknown" if neither of those are
+    # set.
+    attr_accessor :default_user
+
     # The number of connections that are currently open.
     attr_reader :open_connections #:nodoc:
 
@@ -92,6 +98,7 @@ module Net; module SSH; module Multi
       @open_groups = []
       @connect_threads = []
       @on_error = :fail
+      @default_user = ENV['USER'] || ENV['USERNAME'] || "unknown"
 
       @open_connections = 0
       @pending_sessions = []
@@ -171,11 +178,11 @@ module Net; module SSH; module Multi
     # a different Net::SSH::Gateway instance (or +nil+) with the :via key in
     # the +options+.
     #
-    #   session.use 'host', 'user'
-    #   session.use 'host2', 'user2', :via => nil
-    #   session.use 'host3', 'user3', :via => Net::SSH::Gateway.new('gateway.host', 'user')
-    def use(host, user, options={})
-      server = Server.new(self, host, user, {:via => default_gateway}.merge(options))
+    #   session.use 'host'
+    #   session.use 'user@host2', :via => nil
+    #   session.use 'host3', :user => "user3", :via => Net::SSH::Gateway.new('gateway.host', 'user')
+    def use(host, options={})
+      server = Server.new(self, host, {:via => default_gateway}.merge(options))
       exists = servers.index(server)
       if exists
         server = servers[exists]

@@ -12,8 +12,12 @@ class SessionActionsTest < Test::Unit::TestCase
       @servers = []
     end
 
-    def use(h, u, o={})
-      server = Net::SSH::Multi::Server.new(self, h, u, o)
+    def default_user
+      "user"
+    end
+
+    def use(h, o={})
+      server = Net::SSH::Multi::Server.new(self, h, o)
       servers << server
       server
     end
@@ -24,7 +28,7 @@ class SessionActionsTest < Test::Unit::TestCase
   end
 
   def test_busy_should_be_true_if_any_server_is_busy
-    srv1, srv2, srv3 = @session.use('h1', 'u1'), @session.use('h2', 'u2'), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
     srv1.stubs(:busy?).returns(false)
     srv2.stubs(:busy?).returns(false)
     srv3.stubs(:busy?).returns(true)
@@ -32,7 +36,7 @@ class SessionActionsTest < Test::Unit::TestCase
   end
 
   def test_busy_should_be_false_if_all_servers_are_not_busy
-    srv1, srv2, srv3 = @session.use('h1', 'u1', :properties => {:a => 1}), @session.use('h2', 'u2', :properties => {:a => 1, :b => 2}), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
     srv1.stubs(:busy?).returns(false)
     srv2.stubs(:busy?).returns(false)
     srv3.stubs(:busy?).returns(false)
@@ -51,8 +55,8 @@ class SessionActionsTest < Test::Unit::TestCase
   end
 
   def test_open_channel_should_delegate_to_sessions_and_set_accessors_on_each_channel_and_return_multi_channel
-    srv1 = @session.use('h1', 'u1')
-    srv2 = @session.use('h2', 'u2')
+    srv1 = @session.use('h1')
+    srv2 = @session.use('h2')
     s1 = { :server => srv1 }
     s2 = { :server => srv2 }
     c1 = { :stub => :value }

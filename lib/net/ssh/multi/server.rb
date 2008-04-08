@@ -6,13 +6,15 @@ module Net; module SSH; module Multi
   # need to instantiate one of these directly: instead, you should use
   # Net::SSH::Multi::Session#use.
   class Server
+    include Comparable
+
     # The Net::SSH::Multi::Session instance that manages this server instance.
     attr_reader :master
 
     # The host name (or IP address) of the server to connect to.
     attr_reader :host
 
-    # The user name to use when connecting to this server.
+    # The user name to use when logging into the server.
     attr_reader :user
 
     # The Hash of additional options to pass to Net::SSH when connecting
@@ -26,15 +28,31 @@ module Net; module SSH; module Multi
     # Creates a new Server instance with the given connection information. The
     # +master+ argument must be a reference to the Net::SSH::Multi::Session
     # instance that will manage this server reference. The +options+ hash must
-    # conform to the options described for Net::SSH::start, with one addition:
+    # conform to the options described for Net::SSH::start, with two additions:
     #
     # * :via => a Net::SSH::Gateway instance to use when establishing a
     #   connection to this server.
-    def initialize(master, host, user, options={})
+    # * :user => the name of the user to use when logging into this server.
+    #
+    # The +host+ argument may include the username and port number, in which
+    # case those values take precedence over similar values given in the +options+:
+    #
+    #   server = Net::SSH::Multi::Server.new(session, 'user@host:1234')
+    #   puts server.user #-> user
+    #   puts server.port #-> 1234
+    def initialize(master, host, options={})
       @master = master
-      @host = host
-      @user = user
       @options = options.dup
+
+      @user, @host, port = host.match(/^(?:([^;,:=]+)@|)(.*?)(?::(\d+)|)$/)[1,3]
+
+      user_opt, port_opt = @options.delete(:user), @options.delete(:port)
+
+      @user = @user || user_opt || master.default_user
+      port ||= port_opt
+
+      @options[:port] = port.to_i if port
+
       @gateway = @options.delete(:via)
       @failed = false
     end
@@ -51,15 +69,12 @@ module Net; module SSH; module Multi
       options[:port] || 22
     end
 
-    # Compares the given +server+ to this instance, and returns true if they
-    # have the same host, user, and port.
-    def eql?(server)
-      host == server.host &&
-      user == server.user &&
-      port == server.port
+    # Gives server definitions a sort order, and allows comparison.
+    def <=>(server)
+      [host, port, user] <=> [server.host, server.port, server.user]
     end
 
-    alias :== :eql?
+    alias :eql? :==
 
     # Generates a +Fixnum+ hash value for this object. This function has the
     # property that +a.eql?(b)+ implies +a.hash == b.hash+. The

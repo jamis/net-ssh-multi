@@ -44,7 +44,7 @@ class SessionTest < Test::Unit::TestCase
 
   def test_use_should_add_new_server_to_server_list
     @session.open_groups.concat([:first, :second])
-    server = @session.use('host', 'user', :a => :b)
+    server = @session.use('user@host', :a => :b)
     assert_equal [server], @session.servers
     assert_equal 'host', server.host
     assert_equal 'user', server.user
@@ -54,7 +54,7 @@ class SessionTest < Test::Unit::TestCase
 
   def test_use_with_open_groups_should_add_new_server_to_server_list_and_groups
     @session.open_groups.concat([:first, :second])
-    server = @session.use('host', 'user')
+    server = @session.use('host')
     assert_equal [server], @session.groups[:first]
     assert_equal [server], @session.groups[:second]
   end
@@ -62,13 +62,13 @@ class SessionTest < Test::Unit::TestCase
   def test_use_with_default_gateway_should_set_gateway_on_server
     Net::SSH::Gateway.expects(:new).with('host', 'user', {}).returns(:gateway)
     @session.via('host', 'user')
-    server = @session.use('host2', 'user2')
+    server = @session.use('host2')
     assert_equal :gateway, server.gateway
   end
 
   def test_use_with_duplicate_server_will_not_add_server_twice
-    s1 = @session.use('host', 'user')
-    s2 = @session.use('host', 'user')
+    s1 = @session.use('host')
+    s2 = @session.use('host')
     assert_equal 1, @session.servers.length
     assert_equal s1.object_id, s2.object_id
   end
@@ -96,14 +96,14 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_on_should_return_subsession_containing_only_the_given_servers
-    s1 = @session.use('h1', 'u1')
-    s2 = @session.use('h2', 'u2')
+    s1 = @session.use('h1')
+    s2 = @session.use('h2')
     subsession = @session.on(s1, s2)
     assert_equal [s1, s2], subsession.servers
   end
 
   def test_on_should_yield_subsession_if_block_is_given
-    s1 = @session.use('h1', 'u1')
+    s1 = @session.use('h1')
     yielded = nil
     result = @session.on(s1) do |s|
       yielded = s
@@ -113,30 +113,30 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_servers_for_should_return_all_servers_if_no_arguments
-    srv1, srv2, srv3 = @session.use('h1', 'u1'), @session.use('h2', 'u2'), @session.use('h3', 'u3')
-    assert_equal %w(h1 h2 h3), @session.servers_for.map { |s| s.host }.sort
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
+    assert_equal [srv1, srv2, srv3], @session.servers_for.sort
   end
 
   def test_servers_for_should_return_servers_only_for_given_group
-    srv1, srv2, srv3 = @session.use('h1', 'u1'), @session.use('h2', 'u2'), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
     @session.group :app => [srv1, srv2], :db => [srv3]
-    assert_equal %w(h1 h2), @session.servers_for(:app).map { |s| s.host }.sort
+    assert_equal [srv1, srv2], @session.servers_for(:app).sort
   end
 
   def test_servers_for_should_not_return_duplicate_servers
-    srv1, srv2, srv3 = @session.use('h1', 'u1'), @session.use('h2', 'u2'), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
     @session.group :app => [srv1, srv2], :db => [srv2, srv3]
-    assert_equal ["h1", "h2", "h3"], @session.servers_for(:app, :db).map { |s| s.host }.sort
+    assert_equal [srv1, srv2, srv3], @session.servers_for(:app, :db).sort
   end
 
   def test_servers_for_should_correctly_apply_only_and_except_constraints
-    srv1, srv2, srv3 = @session.use('h1', 'u1', :properties => {:a => 1}), @session.use('h2', 'u2', :properties => {:a => 1, :b => 2}), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1', :properties => {:a => 1}), @session.use('h2', :properties => {:a => 1, :b => 2}), @session.use('h3')
     @session.group :app => [srv1, srv2, srv3]
     assert_equal [srv1], @session.servers_for(:app => {:only => {:a => 1}, :except => {:b => 2}})
   end
 
   def test_close_should_close_server_sessions
-    srv1, srv2 = @session.use('h1', 'u1'), @session.use('h2', 'u2')
+    srv1, srv2 = @session.use('h1'), @session.use('h2')
     srv1.expects(:close_channels)
     srv2.expects(:close_channels)
     srv1.expects(:close)
@@ -160,25 +160,25 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_preprocess_should_immediately_return_false_if_block_returns_false
-    srv = @session.use('h1', 'u1')
+    srv = @session.use('h1')
     srv.expects(:preprocess).never
     assert_equal false, @session.preprocess { false }
   end
 
   def test_preprocess_should_call_preprocess_on_component_servers
-    srv = @session.use('h1', 'u1')
+    srv = @session.use('h1')
     srv.expects(:preprocess)
     assert_equal :hello, @session.preprocess { :hello }
   end
 
   def test_preprocess_should_succeed_even_without_block
-    srv = @session.use('h1', 'u1')
+    srv = @session.use('h1')
     srv.expects(:preprocess)
     assert_equal true, @session.preprocess
   end
 
   def test_postprocess_should_call_postprocess_on_component_servers
-    srv = @session.use('h1', 'u1')
+    srv = @session.use('h1')
     srv.expects(:postprocess).with([:a], [:b])
     assert_equal true, @session.postprocess([:a], [:b])
   end
@@ -189,7 +189,7 @@ class SessionTest < Test::Unit::TestCase
 
   def test_process_should_call_select_on_combined_readers_and_writers_from_all_servers
     @session.expects(:postprocess).with([:b, :c], [:a, :c])
-    srv1, srv2, srv3 = @session.use('h1', 'u1'), @session.use('h2', 'u2'), @session.use('h3', 'u3')
+    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
     srv1.expects(:readers).returns([:a])
     srv1.expects(:writers).returns([:a])
     srv2.expects(:readers).returns([])

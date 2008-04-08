@@ -19,13 +19,13 @@ module Net; module SSH
   #     session.via 'gateway', 'gateway-user'
   # 
   #     # define the servers we want to use
-  #     session.use 'host1', 'user1'
-  #     session.use 'host2', 'user2'
+  #     session.use 'user1@host1'
+  #     session.use 'user2@host2'
   # 
   #     # define servers in groups for more granular access
   #     session.group :app do
-  #       session.use 'app1', 'user'
-  #       session.use 'app2', 'user'
+  #       session.use 'user@app1'
+  #       session.use 'user@app2'
   #     end
   # 
   #     # execute commands on all servers
