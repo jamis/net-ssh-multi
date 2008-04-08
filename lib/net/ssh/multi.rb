@@ -28,11 +28,11 @@ module Net; module SSH
   #       session.use 'app2', 'user'
   #     end
   # 
-  #     # execute commands
+  #     # execute commands on all servers
   #     session.exec "uptime"
   # 
   #     # execute commands on a subset of servers
-  #     session.with(:app) { session.exec "hostname" }
+  #     session.with(:app).exec "hostname"
   # 
   #     # run the aggregated event loop
   #     session.loop
