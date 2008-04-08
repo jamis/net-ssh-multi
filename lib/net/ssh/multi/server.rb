@@ -36,6 +36,7 @@ module Net; module SSH; module Multi
       @user = user
       @options = options.dup
       @gateway = @options.delete(:via)
+      @failed = false
     end
 
     # Returns the value of the server property with the given +key+. Server
@@ -80,6 +81,18 @@ module Net; module SSH; module Multi
     # Returns a human-readable representation of this server instance.
     def inspect
       @inspect ||= "#<%s:0x%x %s>" % [self.class.name, object_id, to_s]
+    end
+
+    # Returns +true+ if this server has ever failed a connection attempt.
+    def failed?
+      @failed
+    end
+
+    # Indicates (by default) that this server has just failed a connection
+    # attempt. If +flag+ is false, this can be used to reset the failed flag
+    # so that a retry may be attempted.
+    def fail!(flag=true)
+      @failed = flag
     end
 
     # Returns the Net::SSH session object for this server. If +require_session+

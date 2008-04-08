@@ -35,7 +35,7 @@ module Net; module SSH; module Multi
     def sessions
       threads = servers.map { |server| Thread.new { server.session(true) } if server.session.nil? }
       threads.each { |thread| thread.join if thread }
-      servers.map { |server| server.session }
+      servers.map { |server| server.session }.compact
     end
 
     # Sends a global request to the sessions for all contained servers

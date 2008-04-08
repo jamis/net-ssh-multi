@@ -60,6 +60,11 @@ module Net; module SSH; module Multi
     # of sessions will be open at any given time.
     attr_accessor :concurrent_connections
 
+    # How connection errors should be handled. This defaults to :fail, but
+    # may be set to :ignore if connection errors should be ignored, or
+    # :warn if connection errors should cause a warning.
+    attr_accessor :on_error
+
     # The number of connections that are currently open.
     attr_reader :open_connections #:nodoc:
 
@@ -86,6 +91,7 @@ module Net; module SSH; module Multi
       @gateway = nil
       @open_groups = []
       @connect_threads = []
+      @on_error = :fail
 
       @open_connections = 0
       @pending_sessions = []
@@ -351,6 +357,9 @@ module Net; module SSH; module Multi
     # If +force+ is true, the concurrent_connections check is skipped and a real
     # connection is always returned.
     def next_session(server, force=false) #:nodoc:
+      # don't retry a failed attempt
+      return nil if server.failed?
+
       @session_mutex.synchronize do
         if !force && concurrent_connections && concurrent_connections <= open_connections
           connection = PendingConnection.new(server)
@@ -364,8 +373,19 @@ module Net; module SSH; module Multi
       begin
         server.new_session
       rescue Exception => e
+        server.fail!
         @session_mutex.synchronize { @open_connections -= 1 }
-        raise
+
+        case on_error
+        when :ignore then
+          # do nothing
+        when :warn then
+          warn("error connecting to #{server}: #{e.class} (#{e.message})")
+        else
+          raise
+        end
+
+        return nil
       end
     end
 
