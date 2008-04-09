@@ -25,15 +25,16 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_group_with_mapping_should_append_new_servers_to_specified_and_open_groups
+    s1, s2, s3, s4 = @session.use('h1', 'h2', 'h3', 'h4')
+    @session.group :second => s1
     @session.open_groups.concat([:first, :second])
-    @session.groups[:second] = [1]
-    @session.group %w(third fourth) => [2, 3], :fifth => 1, :sixth => [4]
-    assert_equal [1, 2, 3, 4], @session.groups[:first].sort
-    assert_equal [1, 2, 3, 4], @session.groups[:second].sort
-    assert_equal [2, 3], @session.groups[:third]
-    assert_equal [2, 3], @session.groups[:fourth]
-    assert_equal [1], @session.groups[:fifth]
-    assert_equal [4], @session.groups[:sixth]
+    @session.group %w(third fourth) => [s2, s3], :fifth => s1, :sixth => [s4]
+    assert_equal [s1, s2, s3, s4], @session.groups[:first].sort
+    assert_equal [s1, s2, s3, s4], @session.groups[:second].sort
+    assert_equal [s2, s3], @session.groups[:third].sort
+    assert_equal [s2, s3], @session.groups[:fourth].sort
+    assert_equal [s1], @session.groups[:fifth].sort
+    assert_equal [s4], @session.groups[:sixth].sort
   end
 
   def test_via_should_instantiate_and_set_default_gateway
@@ -55,8 +56,8 @@ class SessionTest < Test::Unit::TestCase
   def test_use_with_open_groups_should_add_new_server_to_server_list_and_groups
     @session.open_groups.concat([:first, :second])
     server = @session.use('host')
-    assert_equal [server], @session.groups[:first]
-    assert_equal [server], @session.groups[:second]
+    assert_equal [server], @session.groups[:first].sort
+    assert_equal [server], @session.groups[:second].sort
   end
 
   def test_use_with_default_gateway_should_set_gateway_on_server
