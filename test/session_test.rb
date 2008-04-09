@@ -67,8 +67,7 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_use_with_duplicate_server_will_not_add_server_twice
-    s1 = @session.use('host')
-    s2 = @session.use('host')
+    s1, s2 = @session.use('host', 'host')
     assert_equal 1, @session.servers.length
     assert_equal s1.object_id, s2.object_id
   end
@@ -96,8 +95,7 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_on_should_return_subsession_containing_only_the_given_servers
-    s1 = @session.use('h1')
-    s2 = @session.use('h2')
+    s1, s2 = @session.use('h1', 'h2')
     subsession = @session.on(s1, s2)
     assert_equal [s1, s2], subsession.servers
   end
@@ -113,18 +111,18 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_servers_for_should_return_all_servers_if_no_arguments
-    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
+    srv1, srv2, srv3 = @session.use('h1', 'h2', 'h3')
     assert_equal [srv1, srv2, srv3], @session.servers_for.sort
   end
 
   def test_servers_for_should_return_servers_only_for_given_group
-    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
+    srv1, srv2, srv3 = @session.use('h1', 'h2', 'h3')
     @session.group :app => [srv1, srv2], :db => [srv3]
     assert_equal [srv1, srv2], @session.servers_for(:app).sort
   end
 
   def test_servers_for_should_not_return_duplicate_servers
-    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
+    srv1, srv2, srv3 = @session.use('h1', 'h2', 'h3')
     @session.group :app => [srv1, srv2], :db => [srv2, srv3]
     assert_equal [srv1, srv2, srv3], @session.servers_for(:app, :db).sort
   end
@@ -136,7 +134,7 @@ class SessionTest < Test::Unit::TestCase
   end
 
   def test_close_should_close_server_sessions
-    srv1, srv2 = @session.use('h1'), @session.use('h2')
+    srv1, srv2 = @session.use('h1', 'h2')
     srv1.expects(:close_channels)
     srv2.expects(:close_channels)
     srv1.expects(:close)
@@ -189,7 +187,7 @@ class SessionTest < Test::Unit::TestCase
 
   def test_process_should_call_select_on_combined_readers_and_writers_from_all_servers
     @session.expects(:postprocess).with([:b, :c], [:a, :c])
-    srv1, srv2, srv3 = @session.use('h1'), @session.use('h2'), @session.use('h3')
+    srv1, srv2, srv3 = @session.use('h1', 'h2', 'h3')
     srv1.expects(:readers).returns([:a])
     srv1.expects(:writers).returns([:a])
     srv2.expects(:readers).returns([])

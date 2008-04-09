@@ -181,16 +181,28 @@ module Net; module SSH; module Multi
     #   session.use 'host'
     #   session.use 'user@host2', :via => nil
     #   session.use 'host3', :user => "user3", :via => Net::SSH::Gateway.new('gateway.host', 'user')
-    def use(host, options={})
-      server = Server.new(self, host, {:via => default_gateway}.merge(options))
-      exists = servers.index(server)
-      if exists
-        server = servers[exists]
-      else
-        servers << server
-        group [] => server
+    #
+    # If only a single host is given, the new server instance is returned. You
+    # can give multiple hosts at a time, though, in which case an array of
+    # server instances will be returned.
+    #
+    #   server1, server2 = session.use "host1", "host2"
+    def use(*hosts)
+      options = hosts.last.is_a?(Hash) ? hosts.pop : {}
+
+      results = hosts.map do |host|
+        server = Server.new(self, host, {:via => default_gateway}.merge(options))
+        exists = servers.index(server)
+        if exists
+          server = servers[exists]
+        else
+          servers << server
+        end
+        server
       end
-      server
+
+      group [] => results
+      results.length > 1 ? results : results.first
     end
 
     # Returns the set of servers that match the given criteria. It can be used
