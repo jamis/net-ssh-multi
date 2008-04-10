@@ -40,6 +40,12 @@ module Net; module SSH; module Multi
       (options[:properties] ||= {})[key]
     end
 
+    # Sets the given key/value pair in the +:properties+ key in the options
+    # hash. If the options hash has no :properties key, it will be created.
+    def []=(key, value)
+      (options[:properties] ||= {})[key] = value
+    end
+
     # Iterates over every instantiated server record in this dynamic server.
     # If the servers have not yet been instantiated, this does nothing (e.g.,
     # it does _not_ automatically invoke #evaluate!).

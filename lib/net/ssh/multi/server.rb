@@ -61,7 +61,13 @@ module Net; module SSH; module Multi
     # properties are described via the +:properties+ key in the options hash
     # when defining the Server.
     def [](key)
-      (options[:properties] ||= {})[key]
+      (options[:properties] || {})[key]
+    end
+
+    # Sets the given key/value pair in the +:properties+ key in the options
+    # hash. If the options hash has no :properties key, it will be created.
+    def []=(key, value)
+      (options[:properties] ||= {})[key] = value
     end
 
     # Returns the port number to use for this connection.
