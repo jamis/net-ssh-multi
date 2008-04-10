@@ -1,3 +1,3 @@
-=== (unreleased)
+=== 1.0 Preview Release 1 (0.99.0) / 10 Apr 2008
 
 * First release of Net::SSH::Multi
