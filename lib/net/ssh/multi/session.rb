@@ -44,6 +44,81 @@ module Net; module SSH; module Multi
   # Note that connections are established lazily, as soon as they are needed.
   # You can force the connections to be opened immediately, though, using the
   # #connect! method.
+  #
+  # == Concurrent Connection Limiting
+  #
+  # Sometimes you may be dealing with a large number of servers, and if you
+  # try to have connections open to all of them simultaneously you'll run into
+  # open file handle limitations and such. If this happens to you, you can set
+  # the #concurrent_connections property of the session. Net::SSH::Multi will
+  # then ensure that no more than this number of connections are ever open
+  # simultaneously.
+  #
+  #   Net::SSH::Multi.start(:concurrent_connections => 5) do |session|
+  #     # ...
+  #   end
+  #
+  # Opening channels and executing commands will still work exactly as before,
+  # but Net::SSH::Multi will transparently close finished connections and open
+  # pending ones.
+  #
+  # == Controlling Connection Errors
+  #
+  # By default, Net::SSH::Multi will raise an exception if a connection error
+  # occurs when connecting to a server. This will typically bubble up and abort
+  # the entire connection process. Sometimes, however, you might wish to ignore
+  # connection errors, for instance when starting a daemon on a large number of
+  # boxes and you know that some of the boxes are going to be unavailable.
+  #
+  # To do this, simply set the #on_error property of the session to :ignore
+  # (or to :warn, if you want a warning message when a connection attempt
+  # fails):
+  #
+  #   Net::SSH::Multi.start(:on_error => :ignore) do |session|
+  #     # ...
+  #   end
+  #
+  # The default is :fail, which causes the exception to bubble up. Additionally,
+  # you can specify a Proc object as the value for #on_error, which will be
+  # invoked with the server in question if the connection attempt fails. You
+  # can force the connection attempt to retry by throwing the :go symbol, with
+  # :retry as the payload, or force the exception to be reraised by throwing
+  # :go with :raise as the payload:
+  #
+  #   handler = Proc.new do |server|
+  #     server[:connection_attempts] ||= 0
+  #     if server[:connection_attempts] < 3
+  #       server[:connection_attempts] += 1
+  #       throw :go, :retry
+  #     else
+  #       throw :go, :raise
+  #     end
+  #   end
+  #
+  #   Net::SSH::Multi.start(:on_error => handler) do |session|
+  #     # ...
+  #   end
+  #
+  # Any other thrown value (or no thrown value at all) will result in the
+  # failure being ignored.
+  #
+  # == Lazily Evaluated Server Definitions
+  #
+  # Sometimes you might be dealing with an environment where you don't know the
+  # names or addresses of the servers until runtime. You can certainly dynamically
+  # build server names and pass them to #use, but if the operation to determine
+  # the server names is expensive, you might want to defer it until the server
+  # is actually needed (especially if the logic of your program is such that
+  # you might not even need to connect to that server every time the program
+  # runs).
+  #
+  # You can do this by passing a block to #use:
+  #
+  #   session.use do |opt|
+  #     lookup_ip_address_of_remote_host
+  #   end
+  #
+  # See #use for more information about this usage.
   class Session
     include SessionActions
 
@@ -189,6 +264,13 @@ module Net; module SSH; module Multi
     # server instances will be returned.
     #
     #   server1, server2 = session.use "host1", "host2"
+    #
+    # If given a block, this will save the block as a Net::SSH::Multi::DynamicServer
+    # definition, to be evaluated lazily the first time the server is needed.
+    # The block will recive any options hash given to #use, and should return
+    # +nil+ (if no servers are to be added), a String or an array of Strings
+    # (to be interpreted as a connection specification), or a Server or an
+    # array of Servers.
     def use(*hosts, &block)
       options = hosts.last.is_a?(Hash) ? hosts.pop : {}
       options = { :via => default_gateway }.merge(options)

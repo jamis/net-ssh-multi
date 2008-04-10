@@ -11,7 +11,9 @@ This library is particularly useful for automating repetitive tasks that must be
 == FEATURES:
 
 * Easily manage multiple connections
-* Open channels, spawn processes, etc. on multiple connections in parallel.
+* Open channels, spawn processes, etc. on multiple connections in parallel
+* Transparently limit concurrent connections when dealing with large numbers of servers (Net::SSH::Multi::Session#concurrent_connections)
+* Specify a default gateway machine through which connections should be tunneled, or even specify a different gateway machine for each server
 
 == SYNOPSIS:
 

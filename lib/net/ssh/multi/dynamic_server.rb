@@ -37,7 +37,7 @@ module Net; module SSH; module Multi
     # Returns the value for the given +key+ in the :properties hash of the
     # +options+. If no :properties hash exists in +options+, this returns +nil+.
     def [](key)
-      (options[:properties] || {})[key]
+      (options[:properties] ||= {})[key]
     end
 
     # Iterates over every instantiated server record in this dynamic server.
