@@ -206,14 +206,13 @@ module Net; module SSH; module Multi
       # session is not open.
       def readers #:nodoc:
         return [] unless session
-        session.listeners.keys
+        session.listeners.keys.reject { |io| io.closed? }
       end
 
       # Returns all registered and pending writers on the session, or an empty
       # array if the session is not open.
       def writers #:nodoc:
-        return [] unless session
-        session.listeners.keys.select do |io|
+        readers.select do |io|
           io.respond_to?(:pending_write?) && io.pending_write?
         end
       end

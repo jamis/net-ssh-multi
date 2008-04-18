@@ -178,9 +178,10 @@ class ServerTest < Test::Unit::TestCase
   def test_readers_should_return_all_listeners_when_session_is_open
     srv = server('host')
     session = expect_connection_to(srv)
-    session.expects(:listeners).returns(1 => 2, 3 => 4, 5 => 6, 7 => 8)
+    io1, io2, io3, io4 = Reader.new, Reader.new, Reader.new, Reader.new
+    session.expects(:listeners).returns(io1 => 2, io2 => 4, io3 => 6, io4 => 8)
     srv.session(true)
-    assert_equal [1, 3, 5, 7], srv.readers.sort
+    assert_equal [io1, io2, io3, io4], srv.readers.sort
   end
 
   def test_writers_should_return_empty_array_when_session_is_not_open
@@ -190,8 +191,8 @@ class ServerTest < Test::Unit::TestCase
   def test_writers_should_return_all_listeners_that_are_pending_writes_when_session_is_open
     srv = server('host')
     session = expect_connection_to(srv)
-    listeners = { writer(:ready) => 1, writer(:reader) => 2,
-      writer(:reader) => 3, writer(:idle) => 4, writer(:ready) => 5 }
+    listeners = { Reader.new(true) => 1, MockIO.new => 2,
+      MockIO.new => 3, Reader.new => 4, Reader.new(true) => 5 }
     session.expects(:listeners).returns(listeners)
     srv.session(true)
     assert_equal 2, srv.writers.length
@@ -212,6 +213,37 @@ class ServerTest < Test::Unit::TestCase
 
   private
 
+    class MockIO
+      include Comparable
+
+      @@identifier = 0
+
+      attr_reader :id
+
+      def initialize
+        @id = (@@identifier += 1)
+      end
+
+      def <=>(io)
+        @id <=> io.id
+      end
+
+      def closed?
+        false
+      end
+    end
+
+    class Reader < MockIO
+      def initialize(ready=false)
+        super()
+        @ready = ready
+      end
+
+      def pending_write?
+        @ready
+      end
+    end
+
     def server(host, options={})
       Net::SSH::Multi::Server.new(@master, host, options)
     end
@@ -220,16 +252,5 @@ class ServerTest < Test::Unit::TestCase
       session = {}
       @master.expects(:next_session).with(server).returns(session)
       return session
-    end
-
-    def writer(mode)
-      case mode
-      when :ready then
-        stub('io', :pending_write? => true)
-      when :idle then
-        stub('io', :pending_write? => false)
-      else
-        stub('io')
-      end
     end
 end
