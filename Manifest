@@ -21,4 +21,3 @@ test/server_test.rb
 test/session_actions_test.rb
 test/session_test.rb
 test/test_all.rb
-x.rb

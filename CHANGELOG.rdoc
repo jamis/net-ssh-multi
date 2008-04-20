@@ -1,4 +1,4 @@
-=== *unreleased*
+=== 1.0 Preview Release 2 (0.99.1) / 19 Apr 2008
 
 * Don't try to select on closed IO streams [Jamis Buck]
 

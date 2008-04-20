@@ -10,7 +10,7 @@ module Net; module SSH; module Multi
     MINOR = 99
 
     # The tiny component of the library's version
-    TINY  = 0
+    TINY  = 1
 
     # The library's version as a Version instance
     CURRENT = new(MAJOR, MINOR, TINY)
