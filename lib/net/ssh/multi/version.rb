@@ -4,13 +4,13 @@ module Net; module SSH; module Multi
   # A trivial class for representing the version of this library.
   class Version < Net::SSH::Version
     # The major component of the library's version
-    MAJOR = 0
+    MAJOR = 1
 
     # The minor component of the library's version
-    MINOR = 99
+    MINOR = 0
 
     # The tiny component of the library's version
-    TINY  = 1
+    TINY  = 0
 
     # The library's version as a Version instance
     CURRENT = new(MAJOR, MINOR, TINY)
