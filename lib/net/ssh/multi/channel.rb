@@ -200,6 +200,20 @@ module Net; module SSH; module Multi
     end
 
     # Registers a callback on all component channels, to be invoked when the
+    # remote server is unable to open the channel. The callback will be
+    # invoked with three arguments: the channel object that couldn't be
+    # opened, a description of the error (as a string), and an integer code
+    # representing the error.
+    #
+    #   channel.on_open_failed do |ch, description, code|
+    #     # ...
+    #   end
+    def on_open_failed(&block)
+      channels.each { |channel| channel.on_open_failed(&block) }
+      self
+    end
+
+    # Registers a callback on all component channels, to be invoked when the
     # remote server sends a channel request of the given +type+. The callback
     # will be invoked with two arguments: the specific channel object receiving
     # the request, and a Net::SSH::Buffer instance containing the request-specific
