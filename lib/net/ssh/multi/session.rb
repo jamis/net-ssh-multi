@@ -481,7 +481,12 @@ module Net; module SSH; module Multi
 
       begin
         server.new_session
-      rescue Exception => e
+
+      # I don't understand why this should be necessary--StandardError is a
+      # subclass of Exception, after all--but without explicitly rescuing
+      # StandardError, things like Errno::* and SocketError don't get caught
+      # here!
+      rescue Exception, StandardError => e
         server.fail!
         @session_mutex.synchronize { @open_connections -= 1 }
 
