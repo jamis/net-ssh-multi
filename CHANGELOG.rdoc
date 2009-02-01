@@ -1,5 +1,7 @@
 === unreleased
 
+* Remove redundant call to block_given? in Session#group [paddor]
+
 * Add Channel#on_open_failed callback hook [Jamis Buck]
 
 

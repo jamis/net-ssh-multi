@@ -219,7 +219,7 @@ module Net; module SSH; module Multi
         begin
           saved_groups = open_groups.dup
           open_groups.concat(args.map { |a| a.to_sym }).uniq!
-          yield self if block_given?
+          yield self
         ensure
           open_groups.replace(saved_groups)
         end
