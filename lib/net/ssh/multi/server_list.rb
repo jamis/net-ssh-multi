@@ -13,7 +13,9 @@ module Net; module SSH; module Multi
     # Create a new ServerList that wraps the given server list. Duplicate entries
     # will be discarded.
     def initialize(list=[])
-      @list = list.uniq
+      options = list.last.is_a?(Hash) ? list.pop : {}
+      @allow_duplicate_servers = options.delete :allow_duplicate_servers
+      @list = @allow_duplicate_servers ? list : list.uniq
     end
 
     # Adds the given server to the list, and returns the argument. If an
@@ -21,11 +23,15 @@ module Net; module SSH; module Multi
     # argument is _not_ added, and the existing server record is returned
     # instead.
     def add(server)
-      index = @list.index(server)
-      if index
-        server = @list[index]
-      else
+      if @allow_duplicate_servers
         @list.push(server)
+      else
+        index = @list.index(server)
+        if index
+          server = @list[index]
+        else
+          @list.push(server)
+        end
       end
       server
     end
@@ -71,7 +77,7 @@ module Net; module SSH; module Multi
         end
       end
 
-      result.uniq
+      @allow_duplicate_servers ? result : result.uniq
     end
 
     alias to_ary flatten
