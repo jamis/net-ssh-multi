@@ -142,6 +142,11 @@ module Net; module SSH; module Multi
     # :warn if connection errors should cause a warning.
     attr_accessor :on_error
 
+    # Whether to allow duplicate server definitions. This defaults to false,
+    # but you may set it to true if you really want to run parallel commands on
+    # the same server.
+    attr_accessor :allow_duplicate_servers
+
     # The default user name to use when connecting to a server. If a user name
     # is not given for a particular server, this value will be used. It defaults
     # to ENV['USER'] || ENV['USERNAME'], or "unknown" if neither of those are
@@ -169,7 +174,7 @@ module Net; module SSH; module Multi
     #     session.use ...
     #   end
     def initialize(options={})
-      @server_list = ServerList.new
+      @server_list = ServerList.new([ { :allow_duplicate_servers => options[:allow_duplicate_servers] } ])
       @groups = Hash.new { |h,k| h[k] = ServerList.new }
       @gateway = nil
       @open_groups = []
@@ -357,7 +362,7 @@ module Net; module SSH; module Multi
           aggregator.concat(servers)
         end
 
-        list.uniq
+        allow_duplicate_servers ? list : list.uniq
       end
     end
 
